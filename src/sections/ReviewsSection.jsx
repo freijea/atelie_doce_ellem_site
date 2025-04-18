@@ -33,11 +33,13 @@ const ReviewsSection = () => {
     <section className="py-16 bg-background">
       <Container>
         <SectionTitle>Quem provou, amou! ❤️</SectionTitle>
-        <Carousel settings={carouselSettings} key={reviews.length}>
-          {reviews.map(review => (
-            <ReviewCard key={review.id} {...review} />
-          ))}
-        </Carousel>
+        <div className="relative pb-36">
+          <Carousel settings={carouselSettings} key={reviews.length}>
+            {reviews.map(review => (
+              <ReviewCard key={review.id} {...review} />
+            ))}
+          </Carousel>
+        </div>
       </Container>
     </section>
   );
