@@ -7,3 +7,8 @@ output "s3_bucket_name" {
   description = "Nome do bucket S3 onde os arquivos estão hospedados."
   value       = module.static_site.s3_bucket_id
 }
+
+output "cloudfront_distribution_id" { # <<< BLOCO ADICIONADO
+  description = "ID da distribuição CloudFront (do módulo)."
+  value       = module.static_site.cloudfront_distribution_id
+}
