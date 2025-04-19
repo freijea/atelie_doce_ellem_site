@@ -11,7 +11,6 @@ const Logo = ({ className = '' }) => {
         alt="Ateliê Doce Ellen Logo"
         width={150} // Fornecer width e height é importante para next/image
         height={50} // Ajuste as dimensões conforme seu logo
-        priority // Priorizar o carregamento do logo (LCP)
         className="h-auto" // Mantém a proporção
       />
     </Link>

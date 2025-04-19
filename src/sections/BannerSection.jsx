@@ -31,7 +31,6 @@ const BannerSection = () => {
               alt={slide.alt}
               fill
               style={{ objectFit: 'cover' }}
-              priority={slide.id === 1}
               sizes="100 vw" 
             />
             {/* Overlay e Conteúdo */}
