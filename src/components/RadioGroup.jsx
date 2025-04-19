@@ -2,17 +2,18 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 const RadioGroup = ({
-  label,           // Rótulo opcional para o grupo
-  name,            // Atributo 'name' para os inputs (essencial)
-  options,         // Array de objetos { value: string, label: string }
-  selectedValue,   // Valor atualmente selecionado (controlado pelo pai)
-  onChange,        // Função chamada ao mudar a seleção (passa o novo value)
-  className = '',    // Classes CSS para o container do grupo
-  radioClassName = '', // Classes CSS para cada par label+input
+  label,
+  name,
+  options,
+  selectedValue,
+  onChange,
+  className = '',
+  radioClassName = '',
+  radioInputClassName = ''
 }) => {
 
   const handleRadioChange = (event) => {
-    onChange(event.target.value); // Chama a função do pai com o novo valor selecionado
+    onChange(event.target.value);
   };
 
   return (
@@ -20,7 +21,7 @@ const RadioGroup = ({
       {label && (
         <label className="block text-sm font-medium text-text-main mb-2">{label}</label>
       )}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2"> {/* flex-wrap para responsividade */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         {options.map((option) => (
           <label key={option.value} className={`flex items-center cursor-pointer ${radioClassName}`}>
             <input
@@ -29,7 +30,8 @@ const RadioGroup = ({
               value={option.value}
               checked={selectedValue === option.value}
               onChange={handleRadioChange}
-              className="form-radio text-primary focus:ring-primary h-4 w-4" // Estilo base do Tailwind Forms
+              // Aplica a classe base + a classe customizada da prop
+              className={`form-radio h-4 w-4 focus:ring-offset-0 ${radioInputClassName}`} // <<< CLASSE APLICADA AQUI
             />
             <span className="ml-2 text-sm text-text-main">{option.label}</span>
           </label>
@@ -52,6 +54,7 @@ RadioGroup.propTypes = {
   onChange: PropTypes.func.isRequired,
   className: PropTypes.string,
   radioClassName: PropTypes.string,
+  radioInputClassName: PropTypes.string,
 };
 
 // Nota: Para estilizar o form-radio com Tailwind, pode ser necessário

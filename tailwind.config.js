@@ -36,5 +36,5 @@ module.exports = { // Use module.exports se não estiver usando type="module" no
         }
       },
     },
-    plugins: [],
+    plugins: [require('@tailwindcss/forms')]
   }

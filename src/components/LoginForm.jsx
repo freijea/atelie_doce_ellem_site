@@ -117,6 +117,7 @@ const LoginForm = ({ className = '' }) => {
           selectedValue={idType}
           onChange={handleIdTypeChange} // Passa a função ajustada
           className="mb-4" // Adiciona margem inferior ao grupo
+          radioInputClassName="text-primary focus:ring-primary"
         />
         {/* --- Fim da Substituição --- */}
         
@@ -132,6 +133,7 @@ const LoginForm = ({ className = '' }) => {
           error={identifierError}
           required
           className="mb-4"
+          placeholderClassName="placeholder:text-secondary placeholder:opacity-60"
         />
 
         <Input
@@ -147,6 +149,7 @@ const LoginForm = ({ className = '' }) => {
           className="mb-2"
           icon={showPassword ? FiEyeOff : FiEye}
           onIconClick={togglePasswordVisibility}
+          placeholderClassName="placeholder:text-secondary placeholder:opacity-60"
         />
 
         {/* ... (Restante do form: Recuperar Senha, Botão Entrar, etc.) ... */}
