@@ -6,7 +6,7 @@ import Link from 'next/link';
 import PropTypes from 'prop-types';
 import { FcGoogle } from 'react-icons/fc';
 import { FaInstagram, FaTiktok } from 'react-icons/fa';
-import { FiEye, FiEyeOff } from 'react-icons/fi'; // Ícones para senha
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 import Input from './Input';
 import Button from './Button';
@@ -17,72 +17,87 @@ const LoginForm = ({ className = '' }) => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [identifierMask, setIdentifierMask] = useState(''); // Estado para máscara
-  const [showPassword, setShowPassword] = useState(false); // Estado para visibilidade da senha
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleIdentifierChange = (e) => {
-    const rawValue = e.target.value.replace(/\D/g, ''); // Remove não dígitos
-    let currentMask = '';
+  // NOVO: Estado para controlar o tipo de identificador
+  const [idType, setIdType] = useState('phone'); // Começa com 'phone' ou 'cpf'
 
-    if (rawValue.length <= 10 || (rawValue.length === 11 && rawValue.startsWith('0'))) {
-        if (rawValue.length <= 10) {
-             currentMask = '(99) 9999-9999';
-         } else {
-             currentMask = '(99) 99999-9999';
-         }
-    } else if (rawValue.length === 11) {
-        currentMask = '999.999.999-99';
-    } else {
-         currentMask = '999.999.999-99';
+  // Define máscara, label e placeholder baseado no tipo selecionado
+  const identifierConfig = {
+    phone: {
+      // Máscara dinâmica para 8 ou 9 dígitos no celular
+      mask: '(00) 90000-0000', // IMask lida com o 9º dígito opcional com '9'
+      label: 'Celular',
+      placeholder: '(xx) 9xxxx-xxxx',
+    },
+    cpf: {
+      mask: '000.000.000-00',
+      label: 'CPF',
+      placeholder: 'xxx.xxx.xxx-xx',
     }
-    setIdentifierMask(currentMask || '');
+  };
 
+  const currentConfig = identifierConfig[idType];
 
-    setFormData(prev => ({ ...prev, identifier: e.target.value })); // Atualiza o valor formatado
+  // Handler SIMPLIFICADO para o Input de identificador
+  const handleIdentifierChange = (e) => {
+    setFormData(prev => ({ ...prev, identifier: e.target.value }));
     if (error) setError(null);
   };
 
+  const handleIdTypeChange = (e) => {
+    setIdType(e.target.value);
+    // Limpa o campo e o erro ao trocar o tipo
+    setFormData(prev => ({ ...prev, identifier: '' }));
+    setError(null);
+  };
 
-  const handleChange = (e) => { // Handler genérico para outros campos (senha)
+  const handleChange = (e) => { // Handler para senha
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (error && typeof error === 'object' && error?.field === name) setError(null); // Limpa erro do campo específico
-    else if (error && typeof error === 'string') setError(null); // Limpa erro geral
+    if (error && typeof error === 'object' && error?.field === name) setError(null);
+    else if (error && typeof error === 'string') setError(null);
   };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = (e) => {
+  // ... (handleSubmit e handleSocialLogin como antes) ...
+
+   const handleSubmit = (e) => {
     e.preventDefault();
     if (isLoading) return;
-    setError(null); // Limpa erro anterior
+    setError(null);
     setSuccessMessage(null);
     setIsLoading(true);
 
-    console.log('Form Data Submitted:', formData);
+    console.log('Form Data Submitted:', { ...formData, identifierType: idType }); // Inclui o tipo no log
     setTimeout(() => {
-      if (formData.identifier === 'erro@teste.com') {
-        setError('Usuário ou senha inválidos.');
-      } else if (formData.identifier === 'sucesso@teste.com') {
+      // Mantenha a lógica de erro/sucesso simulada por enquanto
+      if (idType === 'cpf' && formData.identifier.includes('111')) { // Exemplo erro CPF
+           setError({ field: 'identifier', message: 'CPF inválido.'})
+      } else if (idType === 'phone' && formData.identifier.includes('5555')) { // Exemplo erro Celular
+           setError({ field: 'identifier', message: 'Celular não encontrado.'})
+      }
+       else {
          setSuccessMessage('Login realizado com sucesso! Redirecionando...');
-      } else {
-        setError({ field: 'identifier', message: 'CPF ou Celular não encontrado.'}) // Exemplo de erro de campo
       }
       setIsLoading(false);
     }, 1500);
   };
 
-  const handleSocialLogin = (provider) => {
+   const handleSocialLogin = (provider) => {
     console.log(`Attempting social login with ${provider}`);
      setError(`Login com ${provider} ainda não implementado.`);
      setTimeout(() => setError(null), 3000);
-  };
+   };
+
 
   const identifierError = typeof error === 'object' && error?.field === 'identifier' ? error.message : null;
   const passwordError = typeof error === 'object' && error?.field === 'password' ? error.message : null;
   const generalError = typeof error === 'string' ? error : null;
+
 
   return (
     <div className={`w-full max-w-md p-6 md:p-8 bg-white rounded-default shadow-lg ${className}`}>
@@ -90,15 +105,47 @@ const LoginForm = ({ className = '' }) => {
       {successMessage && <Alert type="success" message={successMessage} className="mb-4" />}
 
       <form onSubmit={handleSubmit} noValidate>
+
+        {/* --- NOVO: Radio Buttons para Seleção de Tipo --- */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-text-main mb-2">Entrar com:</label>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="idType"
+                value="phone"
+                checked={idType === 'phone'}
+                onChange={handleIdTypeChange}
+                className="form-radio text-primary focus:ring-primary"
+              />
+              <span className="ml-2 text-sm text-text-main">Celular</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="idType"
+                value="cpf"
+                checked={idType === 'cpf'}
+                onChange={handleIdTypeChange}
+                className="form-radio text-primary focus:ring-primary"
+              />
+              <span className="ml-2 text-sm text-text-main">CPF</span>
+            </label>
+          </div>
+        </div>
+        {/* --- Fim dos Radio Buttons --- */}
+
+
         <Input
-          label="CPF ou Celular"
-          type="text" // react-input-mask cuida do tipo
+          label={currentConfig.label} // Label dinâmica
+          type="text" // IMask cuida do formato
           name="identifier"
           id="identifier"
-          placeholder="Digite seu CPF ou nº de celular"
+          placeholder={currentConfig.placeholder} // Placeholder dinâmico
           value={formData.identifier}
-          onChange={handleIdentifierChange} // Usa o handler com máscara
-          mask={identifierMask} // Passa a máscara dinâmica
+          onChange={handleIdentifierChange} // Handler SIMPLES agora
+          mask={currentConfig.mask} // Máscara baseada no tipo selecionado
           error={identifierError}
           required
           className="mb-4"
@@ -106,20 +153,20 @@ const LoginForm = ({ className = '' }) => {
 
         <Input
           label="Senha"
-          type={showPassword ? 'text' : 'password'} // Tipo dinâmico
+          type={showPassword ? 'text' : 'password'}
           name="password"
           id="password"
           placeholder="Digite sua senha"
           value={formData.password}
-          onChange={handleChange} // Handler genérico
+          onChange={handleChange}
           error={passwordError}
           required
           className="mb-2"
-          icon={showPassword ? FiEyeOff : FiEye} // Ícone dinâmico
-          onIconClick={togglePasswordVisibility} // Função para o clique no ícone
+          icon={showPassword ? FiEyeOff : FiEye}
+          onIconClick={togglePasswordVisibility}
         />
 
-        {/* ... (Recuperar Senha, Botão Entrar, Divisor, Botões Sociais) ... */}
+        {/* ... (Restante do form: Recuperar Senha, Botão Entrar, etc.) ... */}
          <div className="text-right mb-6">
           <Link href="/recuperar-senha"
             className="text-sm font-medium text-primary hover:underline"
@@ -132,14 +179,15 @@ const LoginForm = ({ className = '' }) => {
           {isLoading ? 'Entrando...' : 'Entrar'}
         </Button>
       </form>
-       {/* Separador e Login Social */}
+
+      {/* ... (Restante: Divisor, Botões Sociais) ... */}
       <div className="my-6 flex items-center justify-center">
         <span className="border-t border-gray-300 flex-grow"></span>
         <span className="px-4 text-sm text-gray-500">Ou entre com</span>
         <span className="border-t border-gray-300 flex-grow"></span>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+       <div className="flex flex-col sm:flex-row gap-3 justify-center">
          <Button variant="secondary" onClick={() => handleSocialLogin('Google')} className="flex-1 flex items-center justify-center gap-2 !bg-white !text-text-main border border-gray-300 hover:!bg-gray-100" >
             <FcGoogle size={20} /> Google
          </Button>
@@ -150,7 +198,6 @@ const LoginForm = ({ className = '' }) => {
             <FaTiktok size={20} /> TikTok
          </Button>
       </div>
-
     </div>
   );
 };

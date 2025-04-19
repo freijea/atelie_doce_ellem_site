@@ -3,14 +3,23 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import InputMask from 'react-input-mask'; // Importa a biblioteca
+import { IMaskInput } from 'react-imask'; // <<< MUDANÇA AQUI
 
-const Input = ({ id, name, type = 'text', label, placeholder, value, onChange, error, required, className = '', mask, icon: Icon, onIconClick }) => { // Adiciona mask, icon, onIconClick
+const Input = ({ id, name, type = 'text', label, placeholder, value, onChange, error, required, className = '', mask, icon: Icon, onIconClick }) => {
   const errorClasses = error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary focus:ring-primary';
   const baseClasses = 'block w-full px-4 py-2 mt-1 rounded-md shadow-sm focus:ring focus:ring-opacity-50';
-  const inputPaddingRight = Icon ? 'pr-10' : ''; // Adiciona padding se houver ícone
+  const inputPaddingRight = Icon ? 'pr-10' : '';
 
-  const InputComponent = mask ? InputMask : 'input'; // Escolhe o componente
+  const commonProps = {
+    type: type,
+    id: id || name,
+    name: name,
+    placeholder: placeholder,
+    value: value,
+    onChange: onChange, // onChange padrão do React
+    required: required,
+    className: `${baseClasses} ${errorClasses} ${inputPaddingRight}`,
+  };
 
   return (
     <div className={`mb-4 ${className}`}>
@@ -19,19 +28,22 @@ const Input = ({ id, name, type = 'text', label, placeholder, value, onChange, e
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div className="relative"> {/* Wrapper para o ícone */}
-        <InputComponent
-          mask={mask} // Prop para react-input-mask
-          type={type}
-          id={id || name}
-          name={name}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          required={required}
-          className={`${baseClasses} ${errorClasses} ${inputPaddingRight}`} // Adiciona padding para ícone
-        />
-        {Icon && ( // Renderiza o ícone se fornecido
+      <div className="relative">
+         {/* Renderiza IMaskInput ou input normal */}
+         {mask ? (
+            <IMaskInput
+              {...commonProps} // Passa props comuns
+              mask={mask}
+              radix="." // Define o separador decimal, se necessário para outros usos
+              unmask={false} // Mantém a máscara no valor do estado (pode ser 'typed' ou true para obter valor puro via onAccept)
+              // onAccept={(value, maskRef) => onChange({ target: { name, value } })} // Alternativa se onChange direto não funcionar bem
+              // Defina aqui outras props específicas do iMask se precisar
+            />
+         ) : (
+            <input {...commonProps} />
+         )}
+
+        {Icon && (
           <button
             type="button"
             onClick={onIconClick}
@@ -60,9 +72,9 @@ Input.propTypes = {
   error: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]), // Pode ser booleano ou mensagem
   required: PropTypes.bool,
   className: PropTypes.string,
-  mask: PropTypes.string, 
+  mask: PropTypes.oneOfType([PropTypes.string, PropTypes.any]), // iMask aceita mais tipos, mas string é o principal aqui
   icon: PropTypes.elementType,
-  onIconClick: PropTypes.func
+  onIconClick: PropTypes.func,
 };
 
 export default Input;
