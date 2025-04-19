@@ -16,9 +16,6 @@ export default function SobrePage() {
       <Header />
       <main>
         <AboutSection />
-        {/* Você pode adicionar outras seções relevantes aqui se desejar */}
-        {/* Ex: <CtaSection /> */}
-        {/* Ex: <LocationBanner /> */}
       </main>
       <Footer />
     </>

@@ -6,10 +6,10 @@ import { FiMenu, FiX } from 'react-icons/fi'; // Ícones para mobile
 import PropTypes from 'prop-types';
 
 const navLinks = [
-  { label: 'Início', href: '#inicio' }, // Usar IDs das seções ou rotas reais
-  { label: 'Cardápio', href: '#cardapio' },
+  { label: 'Início', href: '/' }, // Usar IDs das seções ou rotas reais
+  { label: 'Cardápio', href: '/#cardapio' },
   { label: 'Sobre Nós', href: '/sobre' }, // Criar esta seção se necessário
-  { label: 'Contato', href: '#contato' }, // Criar esta seção se necessário
+  { label: 'Contato', href: '/#contato' }, // Criar esta seção se necessário
 ];
 
 const Navigation = () => {
