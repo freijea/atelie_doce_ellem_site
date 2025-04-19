@@ -11,6 +11,7 @@ module.exports = { // Use module.exports se não estiver usando type="module" no
         colors: {
           primary: '#E75480',    // Rosa Principal
           secondary: '#8FBC8F',  // Verde Principal
+          'secondary-light': '#D9F1D9',
           background: '#FFF8FA', // Fundo Levemente Rosado
           'text-main': '#333333',     // Texto Principal Escuro
           'text-light': '#FFFFFF',   // Texto Claro
