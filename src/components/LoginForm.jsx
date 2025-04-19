@@ -147,7 +147,7 @@ const LoginForm = ({ className = '' }) => {
           error={passwordError}
           required
           className="mb-2"
-          icon={showPassword ? FiEyeOff : FiEye}
+          icon={showPassword ? FiEyeOff: ""}
           onIconClick={togglePasswordVisibility}
           placeholderClassName="placeholder:text-secondary placeholder:opacity-60"
         />
