@@ -11,6 +11,7 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 import Input from './Input';
 import Button from './Button';
 import Alert from './Alert';
+import RadioGroup from './RadioGroup'; // <<< IMPORTAR O NOVO COMPONENTE
 
 const LoginForm = ({ className = '' }) => {
   const [formData, setFormData] = useState({ identifier: '', password: '' });
@@ -18,9 +19,7 @@ const LoginForm = ({ className = '' }) => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // NOVO: Estado para controlar o tipo de identificador
-  const [idType, setIdType] = useState('phone'); // Começa com 'phone' ou 'cpf'
+  const [idType, setIdType] = useState('phone');
 
   // Define máscara, label e placeholder baseado no tipo selecionado
   const identifierConfig = {
@@ -39,15 +38,21 @@ const LoginForm = ({ className = '' }) => {
 
   const currentConfig = identifierConfig[idType];
 
+  // Define as opções para o RadioGroup
+  const idOptions = [
+    { value: 'phone', label: 'Celular' },
+    { value: 'cpf', label: 'CPF' }
+  ];
+
   // Handler SIMPLIFICADO para o Input de identificador
   const handleIdentifierChange = (e) => {
     setFormData(prev => ({ ...prev, identifier: e.target.value }));
     if (error) setError(null);
   };
 
-  const handleIdTypeChange = (e) => {
-    setIdType(e.target.value);
-    // Limpa o campo e o erro ao trocar o tipo
+  // Ajustado para receber o valor diretamente do RadioGroup
+  const handleIdTypeChange = (newValue) => {
+    setIdType(newValue);
     setFormData(prev => ({ ...prev, identifier: '' }));
     setError(null);
   };
@@ -62,8 +67,6 @@ const LoginForm = ({ className = '' }) => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-
-  // ... (handleSubmit e handleSocialLogin como antes) ...
 
    const handleSubmit = (e) => {
     e.preventDefault();
@@ -106,37 +109,17 @@ const LoginForm = ({ className = '' }) => {
 
       <form onSubmit={handleSubmit} noValidate>
 
-        {/* --- NOVO: Radio Buttons para Seleção de Tipo --- */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-text-main mb-2">Entrar com:</label>
-          <div className="flex items-center gap-6">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="idType"
-                value="phone"
-                checked={idType === 'phone'}
-                onChange={handleIdTypeChange}
-                className="form-radio text-primary focus:ring-primary"
-              />
-              <span className="ml-2 text-sm text-text-main">Celular</span>
-            </label>
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="idType"
-                value="cpf"
-                checked={idType === 'cpf'}
-                onChange={handleIdTypeChange}
-                className="form-radio text-primary focus:ring-primary"
-              />
-              <span className="ml-2 text-sm text-text-main">CPF</span>
-            </label>
-          </div>
-        </div>
-        {/* --- Fim dos Radio Buttons --- */}
-
-
+        {/* --- SUBSTITUI Bloco de Radio Buttons pelo Componente --- */}
+        <RadioGroup
+          label="Entrar com:"
+          name="idType"
+          options={idOptions}
+          selectedValue={idType}
+          onChange={handleIdTypeChange} // Passa a função ajustada
+          className="mb-4" // Adiciona margem inferior ao grupo
+        />
+        {/* --- Fim da Substituição --- */}
+        
         <Input
           label={currentConfig.label} // Label dinâmica
           type="text" // IMask cuida do formato
