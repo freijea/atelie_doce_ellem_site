@@ -9,17 +9,34 @@
 @tailwind utilities;
 /* ===================================== */
 
-/* Customização Swiper (Exemplo) */
+/* REMOVA ou Comente a regra GLOBAL */
+/*
+.swiper-pagination {
+  @apply relative mt-4;
+}
+*/
+
+/* Adicione regras ESPECÍFICAS para paginação de produtos e reviews */
+.product-carousel .swiper-pagination,
+.review-carousel .swiper-pagination {
+  @apply relative mt-4 mb-2; /* Aplicando o estilo relativo + margens só aqui */
+                             /* Adicionei mb-2 para dar um respiro abaixo */
+}
+
+/* Estilos gerais para os bullets (mantém global ou pode mover para regras específicas) */
 .swiper-pagination-bullet {
-    @apply bg-white opacity-70 w-3 h-3;
+    @apply bg-white opacity-70 w-3 h-3 mx-1; /* Adicionado mx-1 */
 }
 .swiper-pagination-bullet-active {
   @apply bg-primary opacity-100 !important;
 }
 
+/* Estilos para os botões de navegação (mantém global) */
 .swiper-button-next,
 .swiper-button-prev {
    @apply text-primary w-8 h-8 transition-colors duration-200 hover:text-pink-700;
+   /* Para o Banner, talvez precise de outra cor? Pode adicionar regras específicas como: */
+   /* #inicio .swiper-button-next, #inicio .swiper-button-prev { @apply text-white; } */
 }
 
 .swiper-button-next::after,
@@ -27,12 +44,23 @@
    @apply text-2xl font-extrabold;
 }
 
-/* Ajuste altura swiper */
-.swiper-slide {
+/* Ajuste altura swiper (Pode remover se h-full direto no Carousel funciona) */
+/* .swiper-slide {
   @apply h-auto;
 }
 .swiper-slide > div {
-    @apply h-full;
+   @apply h-full;
+} */
+
+/* Estilos específicos para a paginação do BANNER (se necessário) */
+/* Garante que a paginação do banner use o posicionamento padrão (absoluto) */
+/* e ajuste a posição vertical se precisar */
+#inicio .swiper-pagination {
+  /* bottom: 1rem !important; */ /* Exemplo: Força a ficar 1rem da base */
+  /* Se precisar ajustar a cor dos bullets especificamente no banner: */
+  /* .swiper-pagination-bullet { @apply bg-gray-200 opacity-80; } */
+  /* .swiper-pagination-bullet-active { @apply bg-white opacity-100; } */
 }
+
 
 /* Outros estilos globais... */

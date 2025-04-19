@@ -34,7 +34,7 @@ const ReviewsSection = () => {
       <Container>
         <SectionTitle>Quem provou, amou! ❤️</SectionTitle>
         <div className="relative pb-36">
-          <Carousel settings={carouselSettings} key={reviews.length}>
+          <Carousel settings={carouselSettings} key={reviews.length} className="review-carousel">
             {reviews.map(review => (
               <ReviewCard key={review.id} {...review} />
             ))}

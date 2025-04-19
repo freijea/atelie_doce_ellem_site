@@ -15,11 +15,14 @@ const ProductCard = ({ name, description, imageUrl, price }) => {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Opcional: ajuda na otimização
         />
       </div>
+      {/* Mantém flex-grow aqui para este container ocupar espaço */}
       <div className="p-4 flex flex-col flex-grow">
         <h3 className="font-body text-xl font-bold text-primary mb-2">{name}</h3>
-        <p className="text-text-main text-sm mb-4 flex-grow">{description}</p>
+        {/* Remove flex-grow daqui */}
+        <p className="text-text-main text-sm mb-4">{description}</p> {/* << CLASSE flex-grow REMOVIDA */}
         {price && <p className="font-bold text-lg text-secondary mb-4">R$ {price.toFixed(2)}</p>}
-        <Button variant="primary" className="mt-auto" href="#"> {/* Adicionar link real */}
+        {/* mt-auto empurra o botão para baixo dentro do espaço do flex-grow pai */}
+        <Button variant="primary" className="mt-auto" href="#">
           Ver Detalhes
         </Button>
       </div>
