@@ -32,7 +32,7 @@ const BannerSection = () => {
               fill
               style={{ objectFit: 'cover' }}
               priority={slide.id === 1}
-              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw" 
+              sizes="100 vw" 
             />
             {/* Overlay e Conteúdo */}
             <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4">
