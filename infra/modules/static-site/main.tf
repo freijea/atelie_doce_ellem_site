@@ -40,6 +40,14 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+resource "aws_cloudfront_function" "image_optimizer" {
+  name    = "${var.site_name}-image-optimizer"
+  runtime = "cloudfront-js-1.0" # Use a versão mais recente suportada se diferente
+  comment = "Rewrites image requests to WebP if supported by browser"
+  publish = true
+  code    = file("${path.module}/../../cloudfront_functions/image_optimizer.js") # Caminho para o arquivo JS
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -70,6 +78,11 @@ resource "aws_cloudfront_distribution" "site" {
     default_ttl            = 3600 # 1 hora - ajuste conforme necessário
     max_ttl                = 86400 # 24 horas - ajuste conforme necessário
     compress               = true
+
+    function_association {
+      event_type   = "viewer-request" # Executa antes de verificar o cache
+      function_arn = aws_cloudfront_function.image_optimizer.arn
+    }
   }
 
   # Mapeia erros 403 e 404 para index.html (importante para SPAs/Next.js static export)
