@@ -9,58 +9,62 @@
 @tailwind utilities;
 /* ===================================== */
 
-/* REMOVA ou Comente a regra GLOBAL */
+/* Regras específicas para paginação de produtos e reviews (Posicionamento) */
+.product-carousel .swiper-pagination,
+.review-carousel .swiper-pagination {
+  @apply relative mt-4 mb-2;
+}
+
+/* --- Estilos dos Bullets --- */
+
+/* COMENTE ou REMOVA a regra global para bullets inativos */
 /*
-.swiper-pagination {
-  @apply relative mt-4;
+.swiper-pagination-bullet {
+    @apply bg-white opacity-70 w-3 h-3 mx-1;
 }
 */
 
-/* Adicione regras ESPECÍFICAS para paginação de produtos e reviews */
-.product-carousel .swiper-pagination,
-.review-carousel .swiper-pagination {
-  @apply relative mt-4 mb-2; /* Aplicando o estilo relativo + margens só aqui */
-                             /* Adicionei mb-2 para dar um respiro abaixo */
-}
-
-/* Estilos gerais para os bullets (mantém global ou pode mover para regras específicas) */
+/* Estilo Padrão/Fallback (Pode ser o do banner, se necessário) */
+/* Se não definir aqui, ele pode pegar algum estilo base do Swiper ou ficar sem estilo */
 .swiper-pagination-bullet {
-    @apply bg-white opacity-70 w-3 h-3 mx-1; /* Adicionado mx-1 */
-}
-.swiper-pagination-bullet-active {
-  @apply bg-primary opacity-100 !important;
+    @apply bg-white opacity-70 w-3 h-3 mx-1; /* Mantendo o original como fallback */
 }
 
-/* Estilos para os botões de navegação (mantém global) */
+/* Estilo ESPECÍFICO para bullets inativos no Review Carousel */
+.review-carousel .swiper-pagination-bullet {
+  /* Usando a cor secundária (verde) com opacidade total */
+  @apply bg-secondary opacity-100 w-3 h-3 mx-1;
+  /* Alternativa: Cinza */
+  /* @apply bg-gray-400 opacity-100 w-3 h-3 mx-1; */
+  /* Alternativa: Branco com borda */
+  /* @apply bg-white opacity-100 border border-gray-400 w-3 h-3 mx-1; */
+}
+
+/* Estilo ESPECÍFICO para bullets inativos no Product Carousel */
+/* (Aplicando o mesmo do Review para consistência) */
+.product-carousel .swiper-pagination-bullet {
+  @apply bg-secondary opacity-100 w-3 h-3 mx-1; /* Ou outro estilo se preferir */
+}
+
+/* Estilo para o bullet ATIVO (pode permanecer global ou ser específico) */
+.swiper-pagination-bullet-active {
+  @apply bg-primary opacity-100 !important; /* Cor primária (rosa) */
+}
+
+
+/* --- Estilos dos Botões de Navegação --- */
 .swiper-button-next,
 .swiper-button-prev {
    @apply text-primary w-8 h-8 transition-colors duration-200 hover:text-pink-700;
-   /* Para o Banner, talvez precise de outra cor? Pode adicionar regras específicas como: */
-   /* #inicio .swiper-button-next, #inicio .swiper-button-prev { @apply text-white; } */
 }
-
-.swiper-button-next::after,
-.swiper-button-prev::after {
-   @apply text-2xl font-extrabold;
-}
-
-/* Ajuste altura swiper (Pode remover se h-full direto no Carousel funciona) */
-/* .swiper-slide {
-  @apply h-auto;
-}
-.swiper-slide > div {
-   @apply h-full;
-} */
+/* ... (resto dos estilos de botão e outros) ... */
 
 /* Estilos específicos para a paginação do BANNER (se necessário) */
-/* Garante que a paginação do banner use o posicionamento padrão (absoluto) */
-/* e ajuste a posição vertical se precisar */
 #inicio .swiper-pagination {
-  /* bottom: 1rem !important; */ /* Exemplo: Força a ficar 1rem da base */
-  /* Se precisar ajustar a cor dos bullets especificamente no banner: */
-  /* .swiper-pagination-bullet { @apply bg-gray-200 opacity-80; } */
-  /* .swiper-pagination-bullet-active { @apply bg-white opacity-100; } */
+  /* Garante que use o estilo padrão/fallback definido acima ou o default do Swiper */
 }
+/* Se precisar de cor específica para bullets inativos SÓ no banner: */
+/* #inicio .swiper-pagination-bullet { @apply bg-gray-200 opacity-80; } */
 
 
 /* Outros estilos globais... */

@@ -38,7 +38,7 @@ const ProductsSection = () => {
 
         {/* Adiciona a div wrapper com padding-bottom */}
         {/* Ajuste pb-12 conforme necessário */}
-        <div className="relative pb-36"> {/* << DIV ADICIONADA COM PADDING */}
+        <div className="relative"> {/* << DIV ADICIONADA COM PADDING */}
           <Carousel settings={carouselSettings} key={products.length} className="product-carousel">
             {products.map(product => (
               <ProductCard key={product.id} {...product} />
