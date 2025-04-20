@@ -12,6 +12,7 @@ const Logo = ({ className = '' }) => {
         width={150} // Fornecer width e height é importante para next/image
         height={50} // Ajuste as dimensões conforme seu logo
         priority // Priorizar o carregamento do logo (LCP)
+        sizes="(max-width: 640px) 120px, 150px"
         className="h-auto" // Mantém a proporção
       />
     </Link>

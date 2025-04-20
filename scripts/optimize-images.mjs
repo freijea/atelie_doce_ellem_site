@@ -1,7 +1,10 @@
+console.log('--- Iniciando optimize-images.mjs ---'); // Log de depuração
+
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { sync as globSync } from 'glob';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // --- Configurações ---
 const DEFAULT_SIZES = [320, 480, 640, 768, 1024, 1280, 1600, 1920];
@@ -35,68 +38,89 @@ async function optimizeImages(sourceDir, outputDir, sizes, cleanSourceDir = fals
     return;
   }
 
-  console.log(`🚀 Otimizando ${imagePaths.length} imagens para ${sizes.length} tamanhos (PNG/WebP)...`);
+  console.log(`🚀 Otimizando ${imagePaths.length} imagens para até ${sizes.length + 1} tamanhos (Original + menores) (PNG/WebP)...`);
 
   let successCount = 0;
   let errorCount = 0;
-  const processedOriginals = new Set(); // Para rastrear originais processados para limpeza
+  const processedOriginals = new Set();
 
-  const optimizationPromises = imagePaths.flatMap((imgPath) => {
+  // Usamos Promise.all no final, mas coletamos promessas aqui
+  const allPromises = [];
+
+  for (const imgPath of imagePaths) {
     const parsedPath = path.parse(imgPath);
-    // Previne otimizar arquivos já no formato/nome esperado (segurança extra)
-    if (parsedPath.name.match(/-\d+w$/)) return [];
+    if (parsedPath.name.match(/-\d+w$/)) continue; // Skip already sized
 
-    processedOriginals.add(imgPath); // Adiciona original para possível remoção
+    processedOriginals.add(imgPath);
 
-    return sizes.map(async (size) => {
-      const outputNameBase = path.join(outputDir, `${parsedPath.name}-${size}w`);
-      const pngPath = `${outputNameBase}.png`;
-      const webpPath = `${outputNameBase}.webp`;
-
+    // Processa cada imagem individualmente para melhor controle de fluxo e erros
+    const imageProcessingPromise = (async () => {
+      let generatedCountForImage = 0;
       try {
         const image = sharp(imgPath);
         const metadata = await image.metadata();
+        const originalWidth = metadata.width;
 
-        // Só redimensiona se a imagem for maior que o tamanho alvo
-        if (metadata.width && metadata.width > size) {
-          // Gerar PNG
-          await image
-            .clone() // Clona para não afetar a geração WebP
-            .resize({ width: size })
-            .png({ quality: QUALITY_PNG, effort: 4 }) // Ajuste 'effort' se necessário
-            .toFile(pngPath);
-
-          // Gerar WebP
-          await image
-            .clone() // Clona da original redimensionada (ou da original se não redimensionou)
-            .resize({ width: size }) // Garante o resize mesmo que não clonado antes
-            .webp({ quality: QUALITY_WEBP, effort: 4 })
-            .toFile(webpPath);
-
-        } else {
-           // Se a imagem já for menor ou igual, apenas converte os formatos no tamanho original
-           const smallerOutputNameBase = path.join(outputDir, `${parsedPath.name}-${metadata.width || 'orig'}w`);
-           const smallerPngPath = `${smallerOutputNameBase}.png`;
-           const smallerWebpPath = `${smallerOutputNameBase}.webp`;
-
-           await image.clone().png({ quality: QUALITY_PNG, effort: 4 }).toFile(smallerPngPath);
-           await image.clone().webp({ quality: QUALITY_WEBP, effort: 4 }).toFile(smallerWebpPath);
-           console.log(` Geração apenas para tamanho original ${metadata.width || 'orig'}w para ${parsedPath.base}`);
-           // Não incrementa successCount aqui para refletir apenas os tamanhos gerados
+        if (!originalWidth) {
+          console.warn(` WARN: Skipping ${parsedPath.base} - could not read metadata.`);
+          return; // Pula para a próxima imagem no loop for...of
         }
-         successCount++; // Conta sucesso por tamanho/imagem
-      } catch (error) {
-        console.error(`❌ Erro ao processar ${parsedPath.base} para ${size}w:`, error);
+
+        // 1. Gerar versão no tamanho original
+        const origOutputNameBase = path.join(outputDir, `${parsedPath.name}-${originalWidth}w`);
+        const origPngPath = `${origOutputNameBase}.png`;
+        const origWebpPath = `${origOutputNameBase}.webp`;
+        try {
+          await image.clone().png({ quality: QUALITY_PNG, effort: 4 }).toFile(origPngPath);
+          await image.clone().webp({ quality: QUALITY_WEBP, effort: 4 }).toFile(origWebpPath);
+          console.log(`👍 Gerado tamanho original ${originalWidth}w (PNG/WebP) para ${parsedPath.base}`);
+          generatedCountForImage++;
+        } catch (error) {
+          console.error(`❌ Erro ao gerar tamanho original ${originalWidth}w para ${parsedPath.base}:`, error);
+          errorCount++;
+        }
+
+        // 2. Gerar tamanhos menores definidos em SIZES
+        // Ordena SIZES numericamente para garantir o break correto (já está ordenado, mas por segurança)
+        const sortedSizes = [...sizes].sort((a, b) => a - b);
+        for (const size of sortedSizes) {
+          if (size < originalWidth) {
+            const outputNameBase = path.join(outputDir, `${parsedPath.name}-${size}w`);
+            const pngPath = `${outputNameBase}.png`;
+            const webpPath = `${outputNameBase}.webp`;
+            try {
+              const resizer = image.clone().resize({ width: size });
+              await resizer.clone().png({ quality: QUALITY_PNG, effort: 4 }).toFile(pngPath);
+              await resizer.clone().webp({ quality: QUALITY_WEBP, effort: 4 }).toFile(webpPath);
+              console.log(`👍 Gerado tamanho menor ${size}w (PNG/WebP) para ${parsedPath.base}`);
+              generatedCountForImage++;
+            } catch (error) {
+              console.error(`❌ Erro ao processar ${parsedPath.base} para ${size}w:`, error);
+              errorCount++;
+            }
+          } else {
+            // Já que SIZES está ordenado, não precisamos gerar tamanhos maiores
+            break; // Sai do loop de sizes para esta imagem
+          }
+        } // Fim loop sizes
+
+      } catch (error) { // Captura erro inicial (sharp(imgPath), metadata)
+        console.error(`❌ Erro inicial ao processar ${parsedPath.base}:`, error);
         errorCount++;
       }
-    });
-  });
+      successCount += generatedCountForImage; // Adiciona contagem da imagem ao total
+    })(); // Fim IIFE processamento da imagem
 
+    allPromises.push(imageProcessingPromise);
 
-  await Promise.all(optimizationPromises);
+  } // Fim loop imagePaths
+
+  // Espera todas as imagens serem processadas
+  await Promise.all(allPromises);
 
   console.log('--- Otimização Concluída ---');
-  console.log(`👍 Sucesso (tamanho/imagem): ${successCount}`);
+  // Ajusta a contagem total de sucessos (agora representa versões geradas)
+  console.log(`👍 Versões geradas: ${successCount}`);
   console.log(`👎 Falhas: ${errorCount}`);
   console.log('---------------------------');
 
@@ -123,18 +147,21 @@ async function optimizeImages(sourceDir, outputDir, sizes, cleanSourceDir = fals
 }
 
 // --- Execução (Exemplo para o contexto do build) ---
-// No seu script de build (ex: package.json), você chamaria algo como:
-// "build:optimize": "node ./scripts/optimize-images.mjs"
 // Este bloco executa se o script for chamado diretamente
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+// Correção: Usar pathToFileURL para comparar URLs corretamente em diferentes OS
+if (pathToFileURL(process.argv[1]).href === import.meta.url) {
+  console.log('--- Executando otimização via execução direta ---'); // Log de depuração
   const buildSourceDir = path.join(process.cwd(), 'out'); // Diretório de saída do build
   const buildOutputDir = path.join(process.cwd(), 'out'); // Salva no mesmo lugar
   // Chama a função com os parâmetros para o build
   optimizeImages(buildSourceDir, buildOutputDir, DEFAULT_SIZES, true) // Limpa os originais no build
+    .then(() => console.log('--- Otimização via execução direta concluída com sucesso ---')) // Log de sucesso
     .catch(err => {
       console.error("Erro fatal na otimização de imagens:", err);
       process.exit(1);
     });
+} else {
+  console.log(`--- Script importado, não executando otimização automaticamente. Comparação: argv[1] href='${pathToFileURL(process.argv[1]).href}', import.meta.url='${import.meta.url}' ---`); // Log do caso 'else'
 }
 
 // Exporta a função para uso programático futuro
