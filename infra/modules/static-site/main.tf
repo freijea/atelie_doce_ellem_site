@@ -197,6 +197,34 @@ resource "aws_s3_bucket_public_access_block" "cf_logs" {
   restrict_public_buckets = true
 }
 
+# ++ Adicionando Lifecycle Rule para expirar logs após 30 dias ++
+resource "aws_s3_bucket_lifecycle_configuration" "cf_logs_lifecycle" {
+  bucket = aws_s3_bucket.cf_logs.id
+
+  rule {
+    id     = "ExpireCloudFrontLogsAfter30Days"
+    status = "Enabled"
+
+    filter {
+      prefix = "cloudfront/" # Aplica a regra ao prefixo usado pelo CloudFront
+    }
+
+    expiration {
+      days = 30 # Exclui logs com mais de 30 dias
+    }
+
+    # Opcional: Transição para armazenamento mais barato antes de expirar
+    # transition {
+    #   days          = 15
+    #   storage_class = "STANDARD_IA" # Infrequent Access
+    # }
+    # transition {
+    #   days          = 25
+    #   storage_class = "GLACIER_IR" # Glacier Instant Retrieval
+    # }
+  }
+}
+
 # Política para permitir que CloudFront escreva logs (necessário se não usar ACLs)
 # Documentação recomenda usar a conta de serviço logdelivery.cloudfront.amazonaws.com
 data "aws_iam_policy_document" "cf_logs_policy_doc" {
@@ -220,16 +248,6 @@ data "aws_iam_policy_document" "cf_logs_policy_doc" {
     #   variable = "aws:SourceAccount"
     #   values   = [data.aws_caller_identity.current.account_id]
     # }
-  }
-
-  statement {
-      sid = "AllowCloudFrontLogACLCheck"
-      actions   = ["s3:GetBucketAcl"]
-      resources = [aws_s3_bucket.cf_logs.arn]
-      principals {
-        type        = "Service"
-        identifiers = ["logdelivery.cloudfront.amazonaws.com"]
-      }
   }
 }
 
