@@ -40,14 +40,51 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+# ---- CloudFront Cache Policy ----
+resource "aws_cloudfront_cache_policy" "optimized_images" {
+  name    = "${var.site_name}-optimized-images-policy"
+  comment = "Cache policy for optimized image delivery"
+  default_ttl = 3600  # 1 hora (same as previous default_ttl)
+  max_ttl     = 86400 # 24 horas (same as previous max_ttl)
+  min_ttl     = 0     # (same as previous min_ttl)
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_brotli = true # Enable Brotli if desired
+    enable_accept_encoding_gzip   = true # Enable Gzip
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = [
+          "Accept",
+          "CloudFront-Viewer-Device-Is-Mobile",
+          "CloudFront-Viewer-Device-Is-Tablet",
+          "CloudFront-Viewer-Device-Is-Desktop",
+          "CloudFront-Viewer-Device-Is-SmartTV" # Include SmartTV for completeness
+        ]
+      }
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
+# ---- CloudFront Function ----
 resource "aws_cloudfront_function" "image_optimizer" {
   name    = "${var.site_name}-image-optimizer"
   runtime = "cloudfront-js-1.0" # Use a versão mais recente suportada se diferente
-  comment = "Rewrites image requests to WebP if supported by browser"
+  comment = "Rewrites image URI based on device and WebP support"
   publish = true
   code    = file("${path.module}/../../cloudfront_functions/image_optimizer.js") # Caminho para o arquivo JS
 }
 
+# ---- CloudFront Distribution ----
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -66,18 +103,9 @@ resource "aws_cloudfront_distribution" "site" {
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3-${aws_s3_bucket.site.id}"
 
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
+    cache_policy_id = aws_cloudfront_cache_policy.optimized_images.id # USE THE NEW CACHE POLICY
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600 # 1 hora - ajuste conforme necessário
-    max_ttl                = 86400 # 24 horas - ajuste conforme necessário
-    compress               = true
 
     function_association {
       event_type   = "viewer-request" # Executa antes de verificar o cache
