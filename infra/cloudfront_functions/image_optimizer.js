@@ -7,28 +7,39 @@ const DEFAULT_SIZE = 1280; // Tamanho padrão se a detecção falhar
 const DEFAULT_EXTENSION = 'png'; // Formato padrão se não suportar webp
 
 function getTargetSize(headers) {
-    // Os headers CloudFront-Viewer-Device-* podem não estar presentes se não encaminhados
-    // ou se o CloudFront não conseguiu detectar.
+    // Leitura segura dos headers usando optional chaining
     const isMobile = headers['cloudfront-viewer-device-is-mobile']?.value === 'true';
     const isTablet = headers['cloudfront-viewer-device-is-tablet']?.value === 'true';
     const isDesktop = headers['cloudfront-viewer-device-is-desktop']?.value === 'true';
-    const isSmartTV = headers['cloudfront-viewer-device-is-smarttv']?.value === 'true'; // Pode usar se relevante
+    const isSmartTV = headers['cloudfront-viewer-device-is-smarttv']?.value === 'true';
 
-    if (isMobile) return SIZES[2] || DEFAULT_SIZE; // Ex: 640w para mobile
-    if (isTablet) return SIZES[4] || DEFAULT_SIZE; // Ex: 1024w para tablet
-    if (isDesktop) return SIZES[6] || DEFAULT_SIZE; // Ex: 1600w para desktop
-    if (isSmartTV) return SIZES[SIZES.length - 1] || DEFAULT_SIZE; // Maior tamanho para TV
+    // Log para depuração (visível no CloudWatch Logs)
+    console.log("Device Headers:", JSON.stringify({
+        isMobile,
+        isTablet,
+        isDesktop,
+        isSmartTV
+    }));
 
-    // Se nenhum header específico for true, retorna um tamanho padrão razoável
-    // Pode acontecer em cenários não previstos ou se headers não encaminhados corretamente.
-    console.log("WARN: Device type header not found or recognized. Using default size.");
+    // Lógica de seleção de tamanho (sem alterações)
+    if (isMobile) return SIZES[2] || DEFAULT_SIZE; // Ex: 640w
+    if (isTablet) return SIZES[4] || DEFAULT_SIZE; // Ex: 1024w
+    if (isDesktop) return SIZES[6] || DEFAULT_SIZE; // Ex: 1600w
+    if (isSmartTV) return SIZES[SIZES.length - 1] || DEFAULT_SIZE; // Ex: 1920w
+
+    console.log("WARN: Device type not explicitly recognized. Using default size.");
     return DEFAULT_SIZE;
 }
 
 function handler(event) {
+    console.log("--- CloudFront Function Handler Executing ---"); // Log inicial
     var request = event.request;
     var headers = request.headers;
     var uri = request.uri;
+
+    // Log para depuração (visível no CloudWatch Logs)
+    console.log("Incoming URI:", uri);
+    console.log("Accept Header:", headers.accept?.value || 'Not Present');
 
     // Verifica se a URI é para uma imagem comum (ignora case)
     // E se NÃO JÁ CONTÉM um padrão de tamanho (evita loops ou reescrita desnecessária)
@@ -49,10 +60,11 @@ function handler(event) {
         // 3. Constrói a nova URI
         var newUri = `${baseUri}-${targetSize}w.${targetExtension}`;
 
-        // console.log(`Rewriting URI: ${uri} -> ${newUri} (Size: ${targetSize}w, Format: ${targetExtension})`);
+        console.log(`Rewriting URI: ${uri} -> ${newUri}`); // Log da reescrita
         request.uri = newUri;
+    } else {
+        console.log("URI not matched or already sized. Passing through.");
     }
-    // Se não for uma imagem ou já estiver no formato otimizado, retorna a requisição original
 
     return request;
 }

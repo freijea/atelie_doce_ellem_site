@@ -74,7 +74,7 @@ async function optimizeImages(sourceDir, outputDir, sizes, cleanSourceDir = fals
           await image.clone().png({ quality: QUALITY_PNG, effort: 4 }).toFile(origPngPath);
           await image.clone().webp({ quality: QUALITY_WEBP, effort: 4 }).toFile(origWebpPath);
           console.log(`👍 Gerado tamanho original ${originalWidth}w (PNG/WebP) para ${parsedPath.base}`);
-          generatedCountForImage++;
+          generatedCountForImage += 2;
         } catch (error) {
           console.error(`❌ Erro ao gerar tamanho original ${originalWidth}w para ${parsedPath.base}:`, error);
           errorCount++;
@@ -93,7 +93,7 @@ async function optimizeImages(sourceDir, outputDir, sizes, cleanSourceDir = fals
               await resizer.clone().png({ quality: QUALITY_PNG, effort: 4 }).toFile(pngPath);
               await resizer.clone().webp({ quality: QUALITY_WEBP, effort: 4 }).toFile(webpPath);
               console.log(`👍 Gerado tamanho menor ${size}w (PNG/WebP) para ${parsedPath.base}`);
-              generatedCountForImage++;
+              generatedCountForImage += 2;
             } catch (error) {
               console.error(`❌ Erro ao processar ${parsedPath.base} para ${size}w:`, error);
               errorCount++;
