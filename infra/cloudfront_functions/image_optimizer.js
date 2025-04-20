@@ -33,48 +33,35 @@ function getTargetSize(headers) {
 }
 
 function handler(event) {
-  console.log("--- CloudFront Function Handler Executing ---");
+  console.log('--- CloudFront Function Handler Executing ---');
+
   var request = event.request;
   var headers = request.headers;
-  var uri = request.uri;
+  var uri     = request.uri;
 
-  console.log("Incoming URI:", uri);
-  console.log("Accept Header:", headers.accept?.value || 'Not Present');
+  console.log('Incoming URI: ' + uri);
 
-  // Regex ajustado para garantir que lida com a / inicial e captura corretamente
-  const imageMatch = uri.match(/^\/(.+)\.(jpe?g|png|gif|bmp|tiff)$/i);
-  const alreadySized = uri.match(/-\d+w\.(webp|png)$/i);
+  var acceptHdr   = headers['accept'];
+  var acceptValue = acceptHdr && acceptHdr.value ? acceptHdr.value : 'Not Present';
+  console.log('Accept Header: ' + acceptValue);
+
+  // Só processa imagens comuns e que ainda não tenham sido redimensionadas
+  var imageMatch   = uri.match(/^(.+)\.(jpe?g|png|gif|bmp|tiff)$/i);
+  var alreadySized = uri.match(/-\d+w\.(webp|png)$/i);
 
   if (imageMatch && !alreadySized) {
-    // imageMatch[0] é a string completa (ex: /images/cliente-2.jpg)
-    // imageMatch[1] é a parte capturada após a / inicial (ex: images/cliente-2)
-    // imageMatch[2] é a extensão original (ex: jpg)
-    const baseUriPart = imageMatch[1];
+    var baseUri = imageMatch[1];
 
-    console.log("URI Matched. Base part:", baseUriPart);
+    // Checa se aceita WebP
+    var supportsWebp     = acceptValue.indexOf('image/webp') !== -1;
+    var targetExtension  = supportsWebp ? 'webp' : DEFAULT_EXTENSION;
+    var targetSize       = getTargetSize(headers);
+    var newUri           = baseUri + '-' + targetSize + 'w.' + targetExtension;
 
-    // 1. Determina o formato (WebP ou PNG)
-    var supportsWebp = headers.accept && headers.accept.value.includes('image/webp');
-    var targetExtension = supportsWebp ? 'webp' : DEFAULT_EXTENSION;
-
-    // 2. Determina o tamanho com base nos headers do viewer
-    var targetSize = getTargetSize(headers);
-
-    // 3. Constrói a nova URI, adicionando a / inicial de volta
-    var newUri = `/${baseUriPart}-${targetSize}w.${targetExtension}`;
-
-    console.log(`Rewriting URI: ${uri} -> ${newUri}`);
+    console.log('Rewriting URI: ' + uri + ' -> ' + newUri);
     request.uri = newUri;
   } else {
-    // Log mais detalhado do motivo da não reescrita
-    if (!imageMatch) {
-      console.log("URI did not match image pattern. Passing through.");
-    } else if (alreadySized) {
-      console.log("URI already contains size/format pattern. Passing through.");
-    }
-    else {
-      console.log("URI not matched or already sized (check conditions). Passing through.");
-    }
+    console.log('URI not matched or already sized. Passing through.');
   }
 
   return request;
