@@ -140,7 +140,17 @@ resource "aws_cloudfront_distribution" "site" {
     # ssl_support_method = "sni-only"
   }
 
+  # ++ Adicionando configuração de Logging ++
+  logging_config {
+    include_cookies = false
+    bucket          = aws_s3_bucket.cf_logs.bucket_domain_name
+    prefix          = "cloudfront/"
+  }
+
   tags = var.tags
+
+  # Garante que a política do bucket de log exista antes de criar/atualizar a distribuição
+  depends_on = [aws_s3_bucket_policy.cf_logs_policy]
 }
 
 # ---- S3 Bucket Policy ----
@@ -167,3 +177,67 @@ resource "aws_s3_bucket_policy" "site" {
   bucket = aws_s3_bucket.site.id
   policy = data.aws_iam_policy_document.s3_policy.json
 }
+
+# ---- S3 Bucket for Logs ----
+resource "aws_s3_bucket" "cf_logs" {
+  bucket = "${var.site_name}-cf-logs" # Nome único para o bucket de logs
+  tags   = var.tags
+
+  # ACLs não são recomendadas, mas CloudFront logging ainda pode requerer LogDeliveryWrite
+  # Vamos tentar sem ACL explícita primeiro, confiando nas permissões de serviço.
+}
+
+# Bloqueio de acesso público para o bucket de logs
+resource "aws_s3_bucket_public_access_block" "cf_logs" {
+  bucket = aws_s3_bucket.cf_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Política para permitir que CloudFront escreva logs (necessário se não usar ACLs)
+# Documentação recomenda usar a conta de serviço logdelivery.cloudfront.amazonaws.com
+data "aws_iam_policy_document" "cf_logs_policy_doc" {
+  statement {
+    sid = "AllowCloudFrontLogDelivery"
+    actions = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.cf_logs.arn}/*"]
+    principals {
+      type        = "Service"
+      identifiers = ["logdelivery.cloudfront.amazonaws.com"]
+    }
+    # Condição opcional para garantir que a origem é a sua distribuição
+    # condition {
+    #   test     = "StringEquals"
+    #   variable = "AWS:SourceArn"
+    #   values   = [aws_cloudfront_distribution.site.arn]
+    # }
+    # Condição opcional para garantir que a origem é a conta da AWS
+    # condition {
+    #   test     = "StringEquals"
+    #   variable = "aws:SourceAccount"
+    #   values   = [data.aws_caller_identity.current.account_id]
+    # }
+  }
+
+  statement {
+      sid = "AllowCloudFrontLogACLCheck"
+      actions   = ["s3:GetBucketAcl"]
+      resources = [aws_s3_bucket.cf_logs.arn]
+      principals {
+        type        = "Service"
+        identifiers = ["logdelivery.cloudfront.amazonaws.com"]
+      }
+  }
+}
+
+resource "aws_s3_bucket_policy" "cf_logs_policy" {
+  bucket = aws_s3_bucket.cf_logs.id
+  policy = data.aws_iam_policy_document.cf_logs_policy_doc.json
+  depends_on = [aws_s3_bucket_public_access_block.cf_logs] # Garante que o bloqueio seja aplicado antes da política
+}
+
+# --- Referência à conta atual (necessário para a política se a condição for usada) ---
+# data "aws_caller_identity" "current" {}
