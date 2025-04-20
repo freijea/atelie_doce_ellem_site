@@ -149,8 +149,11 @@ resource "aws_cloudfront_distribution" "site" {
 
   tags = var.tags
 
-  # Garante que a política do bucket de log exista antes de criar/atualizar a distribuição
-  depends_on = [aws_s3_bucket_policy.cf_logs_policy]
+  # Garante que a política do bucket de log E ownership controls existam
+  depends_on = [
+    aws_s3_bucket_policy.cf_logs_policy,
+    aws_s3_bucket_ownership_controls.cf_logs_ownership
+  ]
 }
 
 # ---- S3 Bucket Policy ----
@@ -180,11 +183,16 @@ resource "aws_s3_bucket_policy" "site" {
 
 # ---- S3 Bucket for Logs ----
 resource "aws_s3_bucket" "cf_logs" {
-  bucket = "${var.site_name}-cf-logs" # Nome único para o bucket de logs
+  bucket = "${var.site_name}-cf-logs"
   tags   = var.tags
+}
 
-  # ACLs não são recomendadas, mas CloudFront logging ainda pode requerer LogDeliveryWrite
-  # Vamos tentar sem ACL explícita primeiro, confiando nas permissões de serviço.
+# ++ Explicitly set ownership controls ++
+resource "aws_s3_bucket_ownership_controls" "cf_logs_ownership" {
+  bucket = aws_s3_bucket.cf_logs.id
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
 }
 
 # Bloqueio de acesso público para o bucket de logs
@@ -195,38 +203,31 @@ resource "aws_s3_bucket_public_access_block" "cf_logs" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+
+  # Add dependency on ownership controls
+  depends_on = [aws_s3_bucket_ownership_controls.cf_logs_ownership]
 }
 
 # ++ Adicionando Lifecycle Rule para expirar logs após 30 dias ++
 resource "aws_s3_bucket_lifecycle_configuration" "cf_logs_lifecycle" {
   bucket = aws_s3_bucket.cf_logs.id
 
+  # Add dependency on ownership controls
+  depends_on = [aws_s3_bucket_ownership_controls.cf_logs_ownership]
+
   rule {
     id     = "ExpireCloudFrontLogsAfter30Days"
     status = "Enabled"
-
     filter {
-      prefix = "cloudfront/" # Aplica a regra ao prefixo usado pelo CloudFront
+      prefix = "cloudfront/"
     }
-
     expiration {
-      days = 30 # Exclui logs com mais de 30 dias
+      days = 30
     }
-
-    # Opcional: Transição para armazenamento mais barato antes de expirar
-    # transition {
-    #   days          = 15
-    #   storage_class = "STANDARD_IA" # Infrequent Access
-    # }
-    # transition {
-    #   days          = 25
-    #   storage_class = "GLACIER_IR" # Glacier Instant Retrieval
-    # }
   }
 }
 
-# Política para permitir que CloudFront escreva logs (necessário se não usar ACLs)
-# Documentação recomenda usar a conta de serviço logdelivery.cloudfront.amazonaws.com
+# Política para permitir que CloudFront escreva logs
 data "aws_iam_policy_document" "cf_logs_policy_doc" {
   statement {
     sid = "AllowCloudFrontLogDelivery"
@@ -236,25 +237,17 @@ data "aws_iam_policy_document" "cf_logs_policy_doc" {
       type        = "Service"
       identifiers = ["logdelivery.cloudfront.amazonaws.com"]
     }
-    # Condição opcional para garantir que a origem é a sua distribuição
-    # condition {
-    #   test     = "StringEquals"
-    #   variable = "AWS:SourceArn"
-    #   values   = [aws_cloudfront_distribution.site.arn]
-    # }
-    # Condição opcional para garantir que a origem é a conta da AWS
-    # condition {
-    #   test     = "StringEquals"
-    #   variable = "aws:SourceAccount"
-    #   values   = [data.aws_caller_identity.current.account_id]
-    # }
   }
 }
 
 resource "aws_s3_bucket_policy" "cf_logs_policy" {
   bucket = aws_s3_bucket.cf_logs.id
   policy = data.aws_iam_policy_document.cf_logs_policy_doc.json
-  depends_on = [aws_s3_bucket_public_access_block.cf_logs] # Garante que o bloqueio seja aplicado antes da política
+  # Add dependency on ownership controls AND public access block
+  depends_on = [
+    aws_s3_bucket_public_access_block.cf_logs,
+    aws_s3_bucket_ownership_controls.cf_logs_ownership
+  ]
 }
 
 # --- Referência à conta atual (necessário para a política se a condição for usada) ---
