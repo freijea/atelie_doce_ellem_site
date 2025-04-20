@@ -184,18 +184,20 @@ resource "aws_s3_bucket_policy" "site" {
 # ---- S3 Bucket for Logs ----
 resource "aws_s3_bucket" "cf_logs" {
   bucket = "${var.site_name}-cf-logs"
+  acl    = "log-delivery-write"   # habilita o grupo de logs do CloudFront a escrever aqui
   tags   = var.tags
 }
 
-# ++ Explicitly set ownership controls ++
+# Ajusta o controle de propriedade para permitir ACLs
 resource "aws_s3_bucket_ownership_controls" "cf_logs_ownership" {
   bucket = aws_s3_bucket.cf_logs.id
+
   rule {
-    object_ownership = "BucketOwnerEnforced"
+    object_ownership = "BucketOwnerPreferred"
   }
 }
 
-# Bloqueio de acesso público para o bucket de logs
+# Bloqueio de acesso público (não bloqueia ACLs não public)
 resource "aws_s3_bucket_public_access_block" "cf_logs" {
   bucket = aws_s3_bucket.cf_logs.id
 
@@ -204,30 +206,23 @@ resource "aws_s3_bucket_public_access_block" "cf_logs" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 
-  # Add dependency on ownership controls
   depends_on = [aws_s3_bucket_ownership_controls.cf_logs_ownership]
 }
 
-# ++ Adicionando Lifecycle Rule para expirar logs após 30 dias ++
+# Opcional: ainda pode manter o lifecycle config e policy, se precisar
 resource "aws_s3_bucket_lifecycle_configuration" "cf_logs_lifecycle" {
   bucket = aws_s3_bucket.cf_logs.id
 
-  # Add dependency on ownership controls
   depends_on = [aws_s3_bucket_ownership_controls.cf_logs_ownership]
 
   rule {
     id     = "ExpireCloudFrontLogsAfter30Days"
     status = "Enabled"
-    filter {
-      prefix = "cloudfront/"
-    }
-    expiration {
-      days = 30
-    }
+    filter { prefix = "cloudfront/" }
+    expiration { days = 30 }
   }
 }
 
-# Política para permitir que CloudFront escreva logs
 data "aws_iam_policy_document" "cf_logs_policy_doc" {
   statement {
     sid       = "AllowCloudFrontLogsDelivery"
@@ -238,29 +233,15 @@ data "aws_iam_policy_document" "cf_logs_policy_doc" {
       type        = "Service"
       identifiers = ["delivery.logs.amazonaws.com"]
     }
-
-    # (Opcional, mas recomendado em cenários de logging v2:)
-    # condition {
-    #   test     = "StringEquals"
-    #   variable = "s3:x-amz-acl"
-    #   values   = ["bucket-owner-full-control"]
-    # }
-    # condition {
-    #   test     = "ArnLike"
-    #   variable = "aws:SourceArn"
-    #   values   = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:*"]
-    # }
   }
 }
 
 resource "aws_s3_bucket_policy" "cf_logs_policy" {
   bucket = aws_s3_bucket.cf_logs.id
   policy = data.aws_iam_policy_document.cf_logs_policy_doc.json
+
   depends_on = [
     aws_s3_bucket_public_access_block.cf_logs,
     aws_s3_bucket_ownership_controls.cf_logs_ownership,
   ]
 }
-
-# --- Referência à conta atual (necessário para a política se a condição for usada) ---
-# data "aws_caller_identity" "current" {}
