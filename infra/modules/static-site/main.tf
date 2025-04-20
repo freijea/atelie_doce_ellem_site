@@ -230,23 +230,35 @@ resource "aws_s3_bucket_lifecycle_configuration" "cf_logs_lifecycle" {
 # Política para permitir que CloudFront escreva logs
 data "aws_iam_policy_document" "cf_logs_policy_doc" {
   statement {
-    sid = "AllowCloudFrontLogDelivery"
-    actions = ["s3:PutObject"]
+    sid       = "AllowCloudFrontLogsDelivery"
+    actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.cf_logs.arn}/*"]
+
     principals {
       type        = "Service"
-      identifiers = ["logdelivery.cloudfront.amazonaws.com"]
+      identifiers = ["delivery.logs.amazonaws.com"]
     }
+
+    # (Opcional, mas recomendado em cenários de logging v2:)
+    # condition {
+    #   test     = "StringEquals"
+    #   variable = "s3:x-amz-acl"
+    #   values   = ["bucket-owner-full-control"]
+    # }
+    # condition {
+    #   test     = "ArnLike"
+    #   variable = "aws:SourceArn"
+    #   values   = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:*"]
+    # }
   }
 }
 
 resource "aws_s3_bucket_policy" "cf_logs_policy" {
   bucket = aws_s3_bucket.cf_logs.id
   policy = data.aws_iam_policy_document.cf_logs_policy_doc.json
-  # Add dependency on ownership controls AND public access block
   depends_on = [
     aws_s3_bucket_public_access_block.cf_logs,
-    aws_s3_bucket_ownership_controls.cf_logs_ownership
+    aws_s3_bucket_ownership_controls.cf_logs_ownership,
   ]
 }
 
