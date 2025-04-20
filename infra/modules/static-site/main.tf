@@ -181,14 +181,13 @@ resource "aws_s3_bucket_policy" "site" {
   policy = data.aws_iam_policy_document.s3_policy.json
 }
 
-# ---- S3 Bucket for Logs ----
+# --- S3 Bucket for Logs (sem acl no bloco principal) ---
 resource "aws_s3_bucket" "cf_logs" {
   bucket = "${var.site_name}-cf-logs"
-  acl    = "log-delivery-write"   # habilita o grupo de logs do CloudFront a escrever aqui
   tags   = var.tags
 }
 
-# Ajusta o controle de propriedade para permitir ACLs
+# --- Ownership Controls: habilita ACLs ao usar BucketOwnerPreferred ---
 resource "aws_s3_bucket_ownership_controls" "cf_logs_ownership" {
   bucket = aws_s3_bucket.cf_logs.id
 
@@ -197,7 +196,18 @@ resource "aws_s3_bucket_ownership_controls" "cf_logs_ownership" {
   }
 }
 
-# Bloqueio de acesso público (não bloqueia ACLs não public)
+# --- Agora aplica o ACL log-delivery-write após ownership_controls estar ativo ---
+resource "aws_s3_bucket_acl" "cf_logs_acl" {
+  bucket = aws_s3_bucket.cf_logs.id
+  acl    = "log-delivery-write"
+
+  # força a criação do ACL **depois** de mudar o ownership
+  depends_on = [
+    aws_s3_bucket_ownership_controls.cf_logs_ownership
+  ]
+}
+
+# --- Bloqueio de acesso público (continua sem expor objetos) ---
 resource "aws_s3_bucket_public_access_block" "cf_logs" {
   bucket = aws_s3_bucket.cf_logs.id
 
@@ -206,10 +216,13 @@ resource "aws_s3_bucket_public_access_block" "cf_logs" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 
-  depends_on = [aws_s3_bucket_ownership_controls.cf_logs_ownership]
+  # garante que o ACL já foi aplicado
+  depends_on = [
+    aws_s3_bucket_acl.cf_logs_acl
+  ]
 }
 
-# Opcional: ainda pode manter o lifecycle config e policy, se precisar
+# --- Lifecycle para expirar logs em 30 dias (opcional) ---
 resource "aws_s3_bucket_lifecycle_configuration" "cf_logs_lifecycle" {
   bucket = aws_s3_bucket.cf_logs.id
 
@@ -218,11 +231,18 @@ resource "aws_s3_bucket_lifecycle_configuration" "cf_logs_lifecycle" {
   rule {
     id     = "ExpireCloudFrontLogsAfter30Days"
     status = "Enabled"
-    filter { prefix = "cloudfront/" }
-    expiration { days = 30 }
+
+    filter {
+      prefix = "cloudfront/"
+    }
+
+    expiration {
+      days = 30
+    }
   }
 }
 
+# --- Política que autoriza o serviço de Log Delivery a escrever objetos ---
 data "aws_iam_policy_document" "cf_logs_policy_doc" {
   statement {
     sid       = "AllowCloudFrontLogsDelivery"
